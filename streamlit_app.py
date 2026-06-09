@@ -1,26 +1,13 @@
 import streamlit as st
 
 from orchestrator import run_pipeline
-from usajobs_api import fetch_usajobs
+from utils.india_jobs_api import fetch_india_jobs
 
 
 st.title("Job Hunt Assistant")
 st.markdown(
-    "Search live USAJobs postings, choose one or more roles, and run the agent "
-    "workflow to generate tailored application materials."
-)
-
-keyword = st.text_input("Job keyword", value="data scientist")
-location = st.text_input("Location", value="remote")
-resume_text = st.text_area(
-    "Resume text",
-    value="Paste your resume here...",
-    height=220,
-)
-bio = st.text_area(
-    "Bio",
-    value="I'm a data professional passionate about public service.",
-    height=120,
+    "Search live job postings by role and location, then generate tailored resume "
+    "summary, cover letter, and outreach message with your own resume and bio."
 )
 
 if "job_posts" not in st.session_state:
@@ -29,10 +16,47 @@ if "job_posts" not in st.session_state:
 if "job_results" not in st.session_state:
     st.session_state.job_results = {}
 
-if st.button("Run Job Hunt Assistant"):
-    with st.spinner("Fetching USAJobs listings..."):
-        st.session_state.job_posts = fetch_usajobs(keyword, location, results_per_page=5)
+if "search_keyword" not in st.session_state:
+    st.session_state.search_keyword = "data analyst"
+
+if "search_location" not in st.session_state:
+    st.session_state.search_location = "India"
+
+with st.form("job_search_form"):
+    keyword = st.text_input(
+        "Job role or keyword",
+        value=st.session_state.search_keyword,
+        help="Examples: data analyst, software engineer, product manager",
+    )
+    location = st.text_input(
+        "Location",
+        value=st.session_state.search_location,
+        help="Examples: India, Bengaluru, remote, Mumbai",
+    )
+    resume_text = st.text_area(
+        "Resume text",
+        value="Paste your resume here...",
+        height=220,
+    )
+    bio = st.text_area(
+        "Bio",
+        value="I'm a data professional passionate about public service.",
+        height=120,
+    )
+    search_clicked = st.form_submit_button("Search Jobs")
+
+if search_clicked:
+    st.session_state.search_keyword = keyword
+    st.session_state.search_location = location
+    with st.spinner("Fetching job listings..."):
+        st.session_state.job_posts = fetch_india_jobs(
+            keyword,
+            location,
+            results_per_page=5,
+        )
         st.session_state.job_results = {}
+        for index in range(len(st.session_state.job_posts)):
+            st.session_state.pop(f"job_select_{index}", None)
 
 if st.session_state.job_posts:
     st.markdown("### Select Jobs")

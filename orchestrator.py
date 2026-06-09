@@ -11,8 +11,8 @@ try:
     from agents.jd_analyst import create_jd_analysis_task, get_jd_analyst_agent
     from agents.messaging_agent import create_messaging_task, get_messaging_agent
     from agents.resume_cl_agent import create_resume_cl_task, get_resume_cl_agent
+    from utils.india_jobs_api import fetch_india_jobs
     from utils.tracking import log_application, save_cover_letter_file
-    from utils.usajobs_api import fetch_usajobs
 except ImportError:  # pragma: no cover - fallback for package-style imports
     from job_hunt_assistant.agents.jd_analyst import (
         create_jd_analysis_task,
@@ -26,22 +26,25 @@ except ImportError:  # pragma: no cover - fallback for package-style imports
         create_resume_cl_task,
         get_resume_cl_agent,
     )
+    from job_hunt_assistant.utils.india_jobs_api import fetch_india_jobs
     from job_hunt_assistant.utils.tracking import (
         log_application,
         save_cover_letter_file,
     )
-    from job_hunt_assistant.utils.usajobs_api import fetch_usajobs
 
 from crewai import Crew, Process
 
-CACHE_PATH = Path(__file__).resolve().parent / "data" / "usajobs_cache.json"
+CACHE_PATH = Path(__file__).resolve().parent / "data" / "india_jobs_cache.json"
 JOB_SEARCH_KEYWORD = "business analyst"
-JOB_LOCATION = "remote"
+JOB_LOCATION = "India"
 USER_BIO = "I'm a data professional passionate about public service."
 
 
 def _extract_job_summary(job_post):
     descriptor = job_post.get("MatchedObjectDescriptor", {})
+    if not descriptor:
+        descriptor = job_post
+
     title = descriptor.get("PositionTitle", "Unknown Title")
     organization = descriptor.get("OrganizationName", "Unknown Organization")
     location_data = descriptor.get("PositionLocation", [])
@@ -63,6 +66,9 @@ def _extract_job_summary(job_post):
 
 def _extract_job_metadata(job_post):
     descriptor = job_post.get("MatchedObjectDescriptor", {})
+    if not descriptor:
+        descriptor = job_post
+
     agency_name = descriptor.get("OrganizationName", "Unknown Organization")
     job_title = descriptor.get("PositionTitle", "Unknown Title")
     return agency_name, job_title
@@ -108,22 +114,22 @@ def extract_between_markers(text, start_marker, end_marker):
 
 def _get_job_post(keyword=JOB_SEARCH_KEYWORD, location=JOB_LOCATION):
     try:
-        job_posts = fetch_usajobs(keyword, location)
+        job_posts = fetch_india_jobs(keyword, location)
         if job_posts:
             first_job = job_posts[0]
             _save_cached_job_post(first_job)
             return first_job
-        print("[USAJobs] returned no results; trying the last cached USAJobs post.")
+        print("[IndiaJobs] returned no results; trying the last cached India job post.")
     except Exception as exc:
-        print(f"[USAJobs] lookup failed: {_short_error(exc)}")
-        print("[USAJobs] trying the last cached USAJobs post.")
+        print(f"[IndiaJobs] lookup failed: {_short_error(exc)}")
+        print("[IndiaJobs] trying the last cached India job post.")
 
     cached_job = _load_cached_job_post()
     if cached_job is not None:
         return cached_job
 
     raise RuntimeError(
-        "USAJobs is currently unavailable and no cached posting exists yet."
+        "India job source is currently unavailable and no cached posting exists yet."
     )
 
 
@@ -184,4 +190,4 @@ if __name__ == "__main__":
         resume_text = load_resume()
         print(run_pipeline(first_job, resume_text, USER_BIO))
     except Exception as exc:
-        print(f"[USAJobs] fatal: {_short_error(exc)}")
+        print(f"[IndiaJobs] fatal: {_short_error(exc)}")

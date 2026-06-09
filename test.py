@@ -1,6 +1,6 @@
-from usajobs_api import fetch_usajobs
+from utils.india_jobs_api import fetch_india_jobs
 
-jobs = fetch_usajobs("data analyst")
+jobs = fetch_india_jobs("data analyst")
 
 print(f"Found {len(jobs)} jobs\n")
 
