@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: job_hunt_postgres
+    environment:
+      POSTGRES_USER: job_hunt
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: job_hunt
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U job_hunt"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: job_hunt_app
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      ADZUNA_APP_ID: ${ADZUNA_APP_ID}
+      ADZUNA_APP_KEY: ${ADZUNA_APP_KEY}
+      DATABASE_URL: postgresql://job_hunt:password@postgres:5432/job_hunt
+      LOG_LEVEL: INFO
+    ports:
+      - "8501:8501"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./:/app
+      - /app/__pycache__
+    command: streamlit run streamlit_app.py
+
+volumes:
+  postgres_data:
